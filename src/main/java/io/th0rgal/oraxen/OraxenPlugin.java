@@ -20,6 +20,7 @@ import io.th0rgal.oraxen.gestures.GestureManager;
 import io.th0rgal.oraxen.hud.HudManager;
 import io.th0rgal.oraxen.items.ItemUpdater;
 import io.th0rgal.oraxen.mechanics.MechanicsManager;
+import io.th0rgal.oraxen.mechanics.provided.gameplay.furniture.FurnitureFactory;
 import io.th0rgal.oraxen.pack.generation.ResourcePack;
 import io.th0rgal.oraxen.pack.upload.UploadManager;
 import io.th0rgal.oraxen.recipes.RecipesManager;
@@ -55,16 +56,33 @@ public class OraxenPlugin extends JavaPlugin {
     private ClickActionManager clickActionManager;
     private ProtocolManager protocolManager;
     public final boolean isPaperServer;
+    public static boolean supportsDisplayEntities;
 
     public OraxenPlugin() throws NoSuchFieldException, IllegalAccessException {
         oraxen = this;
-        isPaperServer = isPaperServer();
+        isPaperServer = checkIfPaperServer();
+        supportsDisplayEntities = checkIfSupportsDisplayEntities();
         Logs.enableFilter();
     }
 
-    private boolean isPaperServer() {
+    private static boolean checkIfPaperServer() {
         try {
             Class.forName("com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    private static boolean checkIfSupportsDisplayEntities() {
+        try {
+            Class.forName("org.bukkit.entity.ItemDisplay");
+            if (Bukkit.getPluginManager().isPluginEnabled("ViaBackwards") && FurnitureFactory.getInstance().detectViabackwards) {
+                Logs.logWarning("ViaBackwards is installed, disabling Display Entity type for Furniture");
+                Logs.logWarning("Display Entity furniture is entirely invisible and uninteractable for players using 1.19.3 or lower");
+                Logs.logWarning("If you still want to use Display Entity type for Furniture, disable detect_viabackwards in the mechanics.yml");
+                return false;
+            }
             return true;
         } catch (ClassNotFoundException e) {
             return false;
@@ -108,7 +126,6 @@ public class OraxenPlugin extends JavaPlugin {
         soundManager = new SoundManager(configsManager.getSound());
         gestureManager = new GestureManager();
         OraxenItems.loadItems(configsManager);
-        io.th0rgal.oraxen.items.OraxenItems.loadItems(configsManager);
         fontManager.registerEvents();
         fontManager.verifyRequired(); // Verify the required glyph is there
         hudManager.registerEvents();
